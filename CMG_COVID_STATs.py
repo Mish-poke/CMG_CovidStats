@@ -1,4 +1,4 @@
-_version_ = 1.43
+_version_ = 1.44
 
 #<>
 
@@ -40,12 +40,16 @@ _version_ = 1.43
 # "...minor bugfix including the UAE into the JHU IR analytics, even so its as of now an Annex 20 country" + chr(10) + \
 # "### ### ###"
 
-# V1.43
-informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
-"Weekly ECDC dataset implemented" + chr(10) + \
-"JHU and ECDC data are now used in parallel" + chr(10) + \
-"### ### ###"
+# # V1.43
+# informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
+# "Weekly ECDC dataset implemented" + chr(10) + \
+# "JHU and ECDC data are now used in parallel" + chr(10) + \
+# "### ### ###"
 
+# V1.44
+informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
+"Rework to run outside the CMG network" + chr(10) + \
+"### ### ###"
 
 
 import pandas as pd
@@ -59,6 +63,7 @@ import json
 import sys
 import math
 from datetime import timedelta
+import getpass
 # from playsound import playsound
 
 yes = {'yes','y', 'ye', ''}
@@ -76,7 +81,8 @@ flag_doTheGermanDistricts_RKI_YESTERDAY = 1
 dict_possiblePaths = {
 	"path_local": 0,
 	"path_togetherCMG": 1,
-	"path_costaGroupShared": 2
+	"path_costaGroupShared": 2,
+	"path_TR_HomeLocal": 3
 }
 
 dict_masterFileOrSubfileWithTimeStamp = {
@@ -108,7 +114,8 @@ dict_oneMillionDifferentCountryNames = {
 #region PBI Folder Path (local vs shared drive) and final file names
 dict_flag_pbi_path_finalFolder = {
 	0: r"C:\COVID_Reporting\PBI",
-	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI'
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI',
+	3: r'E:\001_CMG\010 CMG_Covid\005 FINAL PBI'
 }
 
 flag_pbi_name_fileName_ECDC = "COVID_Statistics_ECDC"
@@ -125,7 +132,8 @@ flag_ecdc_sourceDataPathFromTheInternet = 'https://opendata.ecdc.europa.eu/covid
 dict_dataPaths_ECDC = {
 	0: r'C:\COVID_Reporting\Data\ECDC',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
-	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC'
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
 }
 
 flag_fileName_ecdc = "ECDC"
@@ -163,7 +171,8 @@ flag_ecdcWeekly_sourceDataPathFromTheInternet = 'https://opendata.ecdc.europa.eu
 dict_dataPaths_ECDC = {
 	0: r'C:\COVID_Reporting\Data\ECDC',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
-	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC'
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
 }
 
 flag_fileName_ecdcWeekly = "ECDC_WEEKLY"
@@ -192,7 +201,8 @@ flag_jhu_sourceDataPathFromTheInternet = "https://raw.githubusercontent.com/CSSE
 dict_dataPaths_JHU = {
 	0: r'C:\COVID_Reporting\Data\JHU',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\JHU',
-	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\JHU'
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\JHU',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\JHU'
 }
 
 flag_fileName_jhu = "JHU"
@@ -234,7 +244,8 @@ flag_unPop_PopDensity = 'PopDensity'
 
 dict_flag_unPop_filePath = {
 	0: r'C:\COVID_Reporting\Data\Population_Data\United Nations\United_Nations_FinalPopulation_2019.csv',
-	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\United Nations\United_Nations_FinalPopulation_2019.csv'
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\United Nations\United_Nations_FinalPopulation_2019.csv',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\Population_Data\United Nations\United_Nations_FinalPopulation_2019.csv'
 }
 # endregion
 
@@ -250,7 +261,8 @@ flag_eurostat_population = 'population_2020'
 
 dict_flag_eurostat_filePath = {
 	0: r'C:\COVID_Reporting\Data\Population_Data\Eurostat\EUROSTAT_2020_preparedData.csv',
-	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\Eurostat\EUROSTAT_2020_preparedData.csv'
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\Eurostat\EUROSTAT_2020_preparedData.csv',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\Population_Data\Eurostat\EUROSTAT_2020_preparedData.csv'
 }
 # endregion
 
@@ -267,7 +279,8 @@ flag_worldBank_Population_EndOf2019 = "2019"
 
 dict_flag_worldBankPopulation_filePath = {
 	0: r'C:\COVID_Reporting\Data\Population_Data\World_Bank\RecentPopulation_World_Bank.csv',
-	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\World_Bank\RecentPopulation_World_Bank.csv'
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\Population_Data\World_Bank\RecentPopulation_World_Bank.csv',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\Population_Data\World_Bank\RecentPopulation_World_Bank.csv',
 }
 # endregion
 
@@ -280,7 +293,8 @@ flag_csvFile_rki_yesterday_decimal = "."
 dict_dataPaths_RKI_districtYesterday = {
 	0: r'C:\COVID_Reporting\Data\RKI_Districts_Yesterday',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\RKI_Districts_Yesterday',
-	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Yesterday'
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Yesterday',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Yesterday'
 }
 
 url_districtsYesterday = \
@@ -316,7 +330,8 @@ flag_csvFile_rki_timeline_decimal = "."
 dict_dataPaths_RKI_districtTimeline = {
 	0: r'C:\COVID_Reporting\Data\RKI_Districts_Timeline',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\RKI_Districts_Timeline',
-	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Timeline'
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Timeline',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Timeline'
 }
 
 url_districtsTimeline = \
@@ -327,7 +342,8 @@ url_districtsTimeline = \
 #region Annex 20 Country List
 dict_dataPaths_annex20CountryList = {
 	0: r'C:\COVID_Reporting\PBI\ECDC_CountryList_Annex20.xlsx',
-	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI\ECDC_CountryList_Annex20.xlsx'
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI\ECDC_CountryList_Annex20.xlsx',
+	3: r'E:\001_CMG\010 CMG_Covid\005 FINAL PBI\ECDC_CountryList_Annex20.xlsx',
 }
 
 flag_annex20_Country = "Country"
@@ -1178,41 +1194,53 @@ def func_exportThisFileIntoThisFolder(
 
 
 # ######################################################################################################################
-def func_getPathToSaveFiles():
-	workInSharedDrive = False
-	
-	print(chr(10) + "### WORKING & SAVING FILES IN SHARED DRIVE Together_CMG\Covid19_ECDC_JHU? (yes or no?)")
-	choice = input().lower()
-	if choice in yes:
-		print(">> YES >> all data will be saved in shared drive \wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU")
-		workInSharedDrive = True
-	elif choice in no:
-		print(">> NO >> all data will be saved in C:\COVID_Reporting")
-		workInSharedDrive = False
-	else:
-		sys.stdout.write("Please respond with 'yes' or 'no' >>> TOOL STOPPED")
-		exit()
-		
-		
-	return workInSharedDrive
+def func_getPathToSaveFiles(
+	username
+):
+	flag_workInTogetherCMG = False
 
+	if username != 'TR@FI_02':
+		print(chr(10) + "### WORKING & SAVING FILES IN SHARED DRIVE Together_CMG\Covid19_ECDC_JHU? (yes or no?)")
+		choice = input().lower()
+		if choice in yes:
+			print(">> YES >> all data will be saved in shared drive \wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU")
+			flag_workInTogetherCMG = True
+			flag_workInTogetherCMG = dict_possiblePaths["path_togetherCMG"]
+		elif choice in no:
+			print(">> NO >> all data will be saved in C:\COVID_Reporting")
+			# flag_workInTogetherCMG = False
+			flag_workInTogetherCMG = dict_possiblePaths["path_local"]
+		else:
+			sys.stdout.write("Please respond with 'yes' or 'no' >>> TOOL STOPPED")
+			exit()
+	else:
+		print("This user has no access into CMG network, work in local environment")
+		# flag_workInTogetherCMG = False
+		flag_workInTogetherCMG = dict_possiblePaths["path_TR_HomeLocal"]
+
+	return flag_workInTogetherCMG
 
 # ######################################################################################################################
-def func_saveCopyInCostaGroupSharedDrive():
+def func_saveCopyInCostaGroupSharedDrive(
+	username
+):
 	savedCopyInGroupShare = False
-	
-	print(chr(10) + "### save copy of data in Costa Group Shared Drive (costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data) (yes or no?)")
-	choice = input().lower()
-	if choice in yes:
-		print(">> YES >> copy of data will be saved in group shared drive")
-		savedCopyInGroupShare = True
-	elif choice in no:
-		print(">> NO >> no copy in costa group shared drive")
-		savedCopyInGroupShare = False
+
+	if username != 'TR@FI_02':
+		print(chr(10) + "### save copy of data in Costa Group Shared Drive (costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data) (yes or no?)")
+		choice = input().lower()
+		if choice in yes:
+			print(">> YES >> copy of data will be saved in group shared drive")
+			savedCopyInGroupShare = True
+		elif choice in no:
+			print(">> NO >> no copy in costa group shared drive")
+			savedCopyInGroupShare = False
+		else:
+			sys.stdout.write("Please respond with 'yes' or 'no' >>> TOOL STOPPED")
+			exit()
 	else:
-		sys.stdout.write("Please respond with 'yes' or 'no' >>> TOOL STOPPED")
-		exit()
-	
+		print(username + " has no access to CMG shared drive ... do not save any data in Costa Group Share")
+
 	return savedCopyInGroupShare
 
 
@@ -1227,7 +1255,10 @@ def func_getKeyForDataStorageLocalVsShared(
 	
 	if flag_workInTogetherCMG == 1:
 		finalKey = dict_possiblePaths["path_togetherCMG"]
-	
+
+	if flag_workInTogetherCMG == 3:
+		finalKey = dict_possiblePaths["path_TR_HomeLocal"]
+
 	return finalKey
 
 
@@ -1239,7 +1270,7 @@ def func_doAllAroundSavingThisSourceDataset(
 	flag_workInTogetherCMG,
 	flag_saveCopyInCostaGroupSharedDrive
 ):
-	keyPathDict = func_getKeyForDataStorageLocalVsShared(flag_workInTogetherCMG)
+	keyPathDict = flag_workInTogetherCMG #func_getKeyForDataStorageLocalVsShared(flag_workInTogetherCMG)
 	func_exportThisFileIntoThisFolder(
 		df_thisDataset, flag_Datasource, keyPathDict,
 		flag_raw_vs_prepared, dict_masterFileOrSubfileWithTimeStamp["fileType_dailyWithTime"]
@@ -1440,7 +1471,16 @@ def func_calculateIRPredictionForCrossingItaly(
 						
 		
 	return df_thisData
-				
+
+
+# ######################################################################################################################
+def func_getUserName():
+	username = getpass.getuser()
+
+	print("COVID STATs Tool used by " + username)
+
+	return username
+
 
 # ######################################################################################################################
 
@@ -1449,9 +1489,11 @@ print(informationAboutLastVersion)
 print(chr(10) + "Covid-19 data on country level based on JHU (Johns Hopkins University & Medicine)")
 print("Covid-19 data on German-District level from RKI via ArcGIS NPGEO corona data hub")
 
-flag_workInTogetherCMG = func_getPathToSaveFiles()
+username = func_getUserName()
 
-flag_saveCopyInCostaGroupSharedDrive = func_saveCopyInCostaGroupSharedDrive()
+flag_workInTogetherCMG = func_getPathToSaveFiles(username)
+
+flag_saveCopyInCostaGroupSharedDrive = func_saveCopyInCostaGroupSharedDrive(username)
 
 df_annex20CountryList = func_readAnnex20CountryList(flag_workInTogetherCMG)
 
