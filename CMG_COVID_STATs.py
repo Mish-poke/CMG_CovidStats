@@ -115,7 +115,7 @@ dict_oneMillionDifferentCountryNames = {
 dict_flag_pbi_path_finalFolder = {
 	0: r"C:\COVID_Reporting\PBI",
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI',
-	3: r'E:\001_CMG\010 CMG_Covid\005 FINAL PBI'
+	3: r'E:\001_CMG\010 CMG_Covid\PBI'
 }
 
 flag_pbi_name_fileName_ECDC = "COVID_Statistics_ECDC"
@@ -343,7 +343,7 @@ url_districtsTimeline = \
 dict_dataPaths_annex20CountryList = {
 	0: r'C:\COVID_Reporting\PBI\ECDC_CountryList_Annex20.xlsx',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\PBI\ECDC_CountryList_Annex20.xlsx',
-	3: r'E:\001_CMG\010 CMG_Covid\005 FINAL PBI\ECDC_CountryList_Annex20.xlsx',
+	3: r'E:\001_CMG\010 CMG_Covid\PBI\ECDC_CountryList_Annex20.xlsx',
 }
 
 flag_annex20_Country = "Country"
@@ -534,7 +534,9 @@ def func_compareIR_inRelationToItalyPerDay(
 		harmonized_country = flag_ecdcWeekly_countriesAndTerritories
 		harmonized_infectionRate = flag_ecdcWeekly_IR14
 		harmonized_IR_comparedToItaly = flag_ecdcWeekly_IR_thisDayInRelationToItalysIR
-		
+
+	func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_thisData, harmonized_country)
+
 	df_thisData[harmonized_IR_comparedToItaly] = -1
 	
 	for thisUniqueDay in df_thisData[harmonized_date].unique():
@@ -557,10 +559,12 @@ def func_compareIR_inRelationToItalyPerDay(
 				
 				thisCountry = df_dataAllCountriesThisDay.loc[ap, harmonized_country]
 				
-				if thisCountry in dict_oneMillionDifferentCountryNames:
-					thisCountry = dict_oneMillionDifferentCountryNames[thisCountry]
-					# print("name mapping to" + thisCountry)
-				
+				# if thisCountry in dict_oneMillionDifferentCountryNames:
+				# 	thisCountry = dict_oneMillionDifferentCountryNames[thisCountry]
+				# 	df_dataAllCountriesThisDay.loc[ap, harmonized_country] = \
+				# 		thisCountry
+				# 	# print("name mapping to: " + thisCountry)
+				#
 				if printAllDetailsInHere:
 					print(chr(10) + "##################################### ")
 					print("thisCountry (" + thisCountry + ")")
@@ -1483,7 +1487,20 @@ def func_getUserName():
 
 
 # ######################################################################################################################
+def func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(
+	thisDF,
+	flagCountryColumn
+):
+	for thisCountry in dict_oneMillionDifferentCountryNames:
+		print("thisCountry " + thisCountry + " will be replaced by " + dict_oneMillionDifferentCountryNames[thisCountry])
+		thisDF.loc[
+			(thisDF[flagCountryColumn] == thisCountry),
+			flagCountryColumn
+		] = dict_oneMillionDifferentCountryNames[thisCountry]
 
+	return thisDF
+
+# ######################################################################################################################
 print("### CMG Covid-19 Statistics V" + str(_version_) + " made in Python by Thomas Rosenkranz @ CMG")
 print(informationAboutLastVersion)
 print(chr(10) + "Covid-19 data on country level based on JHU (Johns Hopkins University & Medicine)")
@@ -1506,7 +1523,9 @@ if flag_doTheStatsUsing_JHU:
 if flag_doTheStatsUsing_ECDC:
 	flag_Datasource = flag_fileName_ecdc
 	df_covidData_ECDC = func_readDataFromSourceOrFromHdIfAvailableAlready(flag_Datasource)
-	
+
+	# df_covidData_ECDC = func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_covidData_ECDC)
+
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC, flag_Datasource, "RAW",
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
@@ -1534,7 +1553,9 @@ if flag_doTheStatsUsing_ECDC:
 if flag_doTheStatsUsing_ECDC_Weekly:
 	flag_Datasource = flag_fileName_ecdcWeekly
 	df_covidData_ECDC = func_readDataFromSourceOrFromHdIfAvailableAlready(flag_Datasource)
-	
+
+	# df_covidData_ECDC = func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_covidData_ECDC)
+
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC, flag_Datasource, "RAW",
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
