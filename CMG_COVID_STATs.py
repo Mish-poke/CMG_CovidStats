@@ -110,6 +110,16 @@ dict_oneMillionDifferentCountryNames = {
 	"United_Kingdom": "United Kingdom"
 }
 
+dict_jhuCountryNamesToBeUpdatedBeforeDataPreparation = {
+	"United Kingdom_Gibraltar": "United Kingdom / Gibraltar",
+	"United Kingdom_Isle of Man": "United Kingdom / Isle of Man"
+}
+
+dict_finalNamesBeforeSavingData = {
+	"United Kingdom / Isle of Man": "Isle of Man",
+	"United Kingdom / Gibraltar": "Gibraltar"
+}
+
 # ######################################################################################################################
 #region PBI Folder Path (local vs shared drive) and final file names
 dict_flag_pbi_path_finalFolder = {
@@ -872,12 +882,19 @@ def func_renameColumnsWithCountrynames(
 			newColumnName = str(df2_transposed.loc[1, thisColumn]) + "_" + str(df2_transposed.loc[0, thisColumn])
 		else:
 			newColumnName = str(df2_transposed.loc[1, thisColumn])
-		
-		df2_transposed = df2_transposed.rename(columns={thisColumn: newColumnName})
-		
+
 		# print(df2_transposed.loc[0, thisColumn])
 		print("newColumnName: " + str(newColumnName))
-		
+
+		if newColumnName in dict_jhuCountryNamesToBeUpdatedBeforeDataPreparation:
+			print("Change this columnname from >" +
+				  newColumnName + "< to " +
+				  dict_jhuCountryNamesToBeUpdatedBeforeDataPreparation[newColumnName]
+				  )
+			newColumnName = dict_jhuCountryNamesToBeUpdatedBeforeDataPreparation[newColumnName]
+
+		df2_transposed = df2_transposed.rename(columns={thisColumn: newColumnName})
+
 	return df2_transposed
 
 
@@ -1140,7 +1157,9 @@ def func_getPathAndFileNameForFinalPBIFile(
 def func_readDataFromRKI_via_NPGEO_InJson():
 	response = requests.request("GET", url_districtsYesterday)
 	thisResult = response.json()
-	
+
+	print(thisResult)
+
 	df_districts = pd.DataFrame()
 	
 	cnt = 0
@@ -1500,6 +1519,24 @@ def func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(
 
 	return thisDF
 
+
+# ######################################################################################################################
+def func_doTheFinalNameConversion(
+	thisDF,
+	flagCountryColumn
+):
+	for thisColumn in thisDF.columns:
+		print("column: " + thisColumn)
+
+	for thisCountry in dict_finalNamesBeforeSavingData:
+		print("thisCountry " + thisCountry + " will be replaced by " + dict_finalNamesBeforeSavingData[thisCountry])
+		thisDF.loc[
+			(thisDF[flagCountryColumn] == thisCountry),
+			flagCountryColumn
+		] = dict_finalNamesBeforeSavingData[thisCountry]
+
+	return thisDF
+
 # ######################################################################################################################
 print("### CMG Covid-19 Statistics V" + str(_version_) + " made in Python by Thomas Rosenkranz @ CMG")
 print(informationAboutLastVersion)
@@ -1573,6 +1610,9 @@ if flag_doTheStatsUsing_ECDC_Weekly:
 	
 	# df_covidData_ECDC = func_calculateIRPredictionForCrossingItaly(df_covidData_ECDC, df_annex20CountryList)
 	#
+
+	df_covidData_ECDC = func_doTheFinalNameConversion(df_covidData_ECDC, flag_ecdcWeekly_countriesAndTerritories)
+
 	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC, flag_Datasource, flag_workInTogetherCMG, )
 	#
 	func_doAllAroundSavingThisSourceDataset(
@@ -1588,9 +1628,11 @@ if flag_doTheStatsUsing_JHU:
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_JHU, flag_Datasource, "RAW",
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
-	
+
 	df_covidData_JHU = func_prepareThisCovidData(df_covidData_JHU, flag_Datasource, flag_workInTogetherCMG)
-	
+
+	df_covidData_JHU = func_doTheFinalNameConversion(df_covidData_JHU, flag_jhu_converted_country)
+
 	func_exportFinalFileIntoPBIFolder(df_covidData_JHU, flag_Datasource, flag_workInTogetherCMG)
 	
 	func_doAllAroundSavingThisSourceDataset(
