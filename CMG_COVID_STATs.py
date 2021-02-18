@@ -73,9 +73,10 @@ masterDelimiterFinalFiles = ";"
 
 # ######################################################################################################################
 flag_doTheStatsUsing_ECDC = 0
-flag_doTheStatsUsing_ECDC_Weekly = 1
-flag_doTheStatsUsing_JHU = 1
-flag_doTheGermanDistricts_RKI_YESTERDAY = 1
+flag_doTheStatsUsing_ECDC_Weekly = 0
+flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout = 1
+flag_doTheStatsUsing_JHU = 0
+flag_doTheGermanDistricts_RKI_YESTERDAY = 0
 # ######################################################################################################################
 
 dict_possiblePaths = {
@@ -98,7 +99,8 @@ dict_above_or_belowIR_Italy = {
 
 dict_ecdc_dataset = {
 	"old_daily": 0,
-	"new_weekly": 1
+	"new_weekly": 1,
+	"new_weekly_changedStructureFeb2021": 2
 }
 
 dict_oneMillionDifferentCountryNames = {
@@ -175,7 +177,7 @@ flag_calculatedIR7ForECDC = True
 #endregion
 
 # ######################################################################################################################
-#region WEEKLY ECDC Dataset
+#region WEEKLY ECDC Dataset OLD LAYOUT
 flag_ecdcWeekly_sourceDataPathFromTheInternet = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv'
 
 dict_dataPaths_ECDC = {
@@ -203,6 +205,38 @@ flag_ecdcWeekly_IR14 = 'notification_rate_per_100000_population_14-days'
 flag_ecdcWeekly_cumulativeTotalCases = "cumulativeTotalCases"
 flag_ecdcWeekly_IR_thisDayInRelationToItalysIR = "IR above(1) or below(0) Italys IR"
 #endregion
+
+# ######################################################################################################################
+#region WEEKLY ECDC Dataset OLD LAYOUT
+flag_ecdcWeeklyNEW_sourceDataPathFromTheInternet = 'https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv'
+
+dict_dataPaths_ECDC = {
+	0: r'C:\COVID_Reporting\Data\ECDC',
+	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
+	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
+}
+
+flag_fileName_ecdcNEW_Weekly = "ECDC_WEEKLY_NEW_Layout"
+flag_csvFile_ecdcNEW_delimiter = ","
+flag_csvFile_ecdcNEW_decimal = "."
+
+flag_ecdcWeeklyNEW_country = "country"
+flag_ecdcWeeklyNEW_country_code = "country"
+flag_ecdcWeeklyNEW_continent = 'continent'
+flag_ecdcWeeklyNEW_population = 'population'
+flag_ecdcWeeklyNEW_indicator = 'indicator'
+flag_ecdcWeeklyNEW_weekly_count = 'weekly_count'
+flag_ecdcWeeklyNEW_year_week = 'year_week'
+flag_ecdcWeeklyNEW_rate_14_day = 'rate_14_day'
+flag_ecdcWeeklyNEW_cumulative_count = 'cumulative_count'
+flag_ecdcWeeklyNEW_source = 'source'
+
+flag_ecdcWeeklyNEW_cumulativeTotalCases = "cumulativeTotalCases"
+flag_ecdcWeeklyNEW_IR_thisDayInRelationToItalysIR = "IR above(1) or below(0) Italys IR"
+#endregion
+
+
 
 # ######################################################################################################################
 #region JHU Dataset of confirmed cases
@@ -491,11 +525,13 @@ def func_prepareThisCovidData(
 	
 	if thisSourceFileFlag == flag_fileName_ecdc:
 		df_thisCovidData = func_prepare_ecdcData(df_thisCovidData, dict_ecdc_dataset["old_daily"])
-	
-	# as of now this step is the same for daily and weekly
+
 	if thisSourceFileFlag == flag_fileName_ecdcWeekly:
 		df_thisCovidData = func_prepare_ecdcData(df_thisCovidData, dict_ecdc_dataset["new_weekly"])
-		
+
+	if thisSourceFileFlag == flag_fileName_ecdcNEW_Weekly:
+		df_thisCovidData = func_prepare_ecdcData(df_thisCovidData, dict_ecdc_dataset["new_weekly_changedStructureFeb2021"])
+
 	if thisSourceFileFlag == flag_fileName_jhu:
 		df_thisCovidData = func_prepare_juhuData(df_thisCovidData)
 		
@@ -539,11 +575,18 @@ def func_compareIR_inRelationToItalyPerDay(
 		harmonized_country = flag_ecdc_countryLongName
 		harmonized_infectionRate = flag_ecdc_cumulative_IR_last_14_days
 		harmonized_IR_comparedToItaly = flag_ecdc_IR_thisDayInRelationToItalysIR
-	else:
+
+	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly"]:
 		harmonized_date = flag_ecdcWeekly_date
 		harmonized_country = flag_ecdcWeekly_countriesAndTerritories
 		harmonized_infectionRate = flag_ecdcWeekly_IR14
 		harmonized_IR_comparedToItaly = flag_ecdcWeekly_IR_thisDayInRelationToItalysIR
+
+	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]:
+		harmonized_date = flag_ecdcWeeklyNEW_year_week
+		harmonized_country = flag_ecdcWeeklyNEW_country
+		harmonized_infectionRate = flag_ecdcWeeklyNEW_rate_14_day
+		harmonized_IR_comparedToItaly = flag_ecdcWeeklyNEW_IR_thisDayInRelationToItalysIR
 
 	func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_thisData, harmonized_country)
 
@@ -606,7 +649,7 @@ def func_compareIR_inRelationToItalyPerDay(
 					if printAllDetailsInHere:
 						print(thisCountry + " annex20CountryFlag: (" + annex20CountryFlag + ")")
 					
-					if annex20CountryFlag != "empty":
+					if annex20CountryFlag != "empty" and thisCountry != "United Kingdom":
 						if printAllDetailsInHere:
 							print("skip this country ... Annex20 (" + df_annex20CountryList.loc[1, flag_annex20_Annex20CountryLetter] + ")")
 						
@@ -913,15 +956,28 @@ def func_prepare_ecdcData(
 	df_thisCovidData,
 	flag_ecdcDataset
 ):
-	df_thisCovidData[flag_ecdc_date] = pd.to_datetime(df_thisCovidData[flag_ecdc_date], format='%d/%m/%Y')
-	
 	if flag_ecdcDataset == dict_ecdc_dataset["old_daily"]:
-		df_thisCovidData = df_thisCovidData.sort_values([flag_ecdc_countryLongName, flag_ecdc_date],
-																		ascending=(True, True))
-	else:
-		df_thisCovidData = df_thisCovidData.sort_values([flag_ecdcWeekly_countriesAndTerritories, flag_ecdcWeekly_date],
-																		ascending=(True, True))
-		
+		df_thisCovidData[flag_ecdc_date] = pd.to_datetime(df_thisCovidData[flag_ecdc_date], format='%d/%m/%Y')
+
+		df_thisCovidData = df_thisCovidData.sort_values(
+			[flag_ecdc_countryLongName, flag_ecdc_date],
+			ascending=(True, True)
+		)
+
+	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly"]:
+		df_thisCovidData[flag_ecdc_date] = pd.to_datetime(df_thisCovidData[flag_ecdc_date], format='%d/%m/%Y')
+
+		df_thisCovidData = df_thisCovidData.sort_values(
+			[flag_ecdcWeekly_countriesAndTerritories, flag_ecdcWeekly_date],
+			ascending=(True, True)
+		)
+
+	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]:
+		df_thisCovidData = df_thisCovidData.sort_values(
+			[flag_ecdcWeeklyNEW_country, flag_ecdcWeeklyNEW_year_week],
+			ascending=(True, True)
+		)
+
 	df_thisCovidData = df_thisCovidData.reset_index(drop=True)
 	
 	# for thisColumn in df_thisCovidData.columns:
@@ -1003,7 +1059,20 @@ def func_addCumulativeTotalPerCountry(
 					df_thisCovidData.loc[ap, flag_ecdcWeekly_cumulativeTotalCases] = \
 						df_thisCovidData.loc[ap - 1, flag_ecdcWeekly_cumulativeTotalCases] + \
 						df_thisCovidData.loc[ap, flag_ecdcWeekly_cases_weekly]
-	
+
+	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]:
+		df_thisCovidData[flag_ecdcWeeklyNEW_cumulativeTotalCases] = 0
+
+		for ap in df_thisCovidData.index:
+			if ap > 0:
+				if \
+					df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_country] == \
+					df_thisCovidData.loc[ap - 1, flag_ecdcWeeklyNEW_country]:
+
+					df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_cumulativeTotalCases] = \
+						df_thisCovidData.loc[ap - 1, flag_ecdcWeeklyNEW_cumulativeTotalCases] + \
+						df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_weekly_count]
+
 	return df_thisCovidData
 
 
@@ -1031,12 +1100,17 @@ def func_getPathAndFileNameForLocalDataStorage(
 		localData_filePathAndName = dict_dataPaths_ECDC[flag_thisPathWay] + fileNameAppendix
 		print(chr(10) + thisSourceFileFlag + " backup of " + flag_raw_vs_prepared + " file saved in ... ")
 		print(localData_filePathAndName)
-	
+
 	if thisSourceFileFlag == flag_fileName_ecdcWeekly:
 		localData_filePathAndName = dict_dataPaths_ECDC[flag_thisPathWay] + fileNameAppendix
 		print(chr(10) + thisSourceFileFlag + " backup of " + flag_raw_vs_prepared + " file saved in ... ")
 		print(localData_filePathAndName)
-		
+
+	if thisSourceFileFlag == flag_fileName_ecdcNEW_Weekly:
+		localData_filePathAndName = dict_dataPaths_ECDC[flag_thisPathWay] + fileNameAppendix
+		print(chr(10) + thisSourceFileFlag + " backup of " + flag_raw_vs_prepared + " file saved in ... ")
+		print(localData_filePathAndName)
+
 	if thisSourceFileFlag == flag_fileName_jhu:
 		localData_filePathAndName = dict_dataPaths_JHU[flag_thisPathWay] + fileNameAppendix
 		print(chr(10) + thisSourceFileFlag + " backup of " + flag_raw_vs_prepared + " file saved in ... ")
@@ -1069,7 +1143,11 @@ def func_getSourceDataPath(
 	if thisSourceFileFlag == flag_fileName_ecdcWeekly:
 		print(chr(10) + thisSourceFileFlag + " source data download from: " + flag_ecdcWeekly_sourceDataPathFromTheInternet)
 		return flag_ecdcWeekly_sourceDataPathFromTheInternet
-	
+
+	if thisSourceFileFlag == flag_fileName_ecdcNEW_Weekly:
+		print(chr(10) + thisSourceFileFlag + " source data download from: " + flag_ecdcWeeklyNEW_sourceDataPathFromTheInternet)
+		return flag_ecdcWeeklyNEW_sourceDataPathFromTheInternet
+
 	if thisSourceFileFlag == flag_fileName_jhu:
 		print(chr(10) + thisSourceFileFlag + " source data download from: " + flag_jhu_sourceDataPathFromTheInternet)
 		return flag_jhu_sourceDataPathFromTheInternet
@@ -1556,7 +1634,7 @@ if flag_doTheStatsUsing_JHU:
 	df_eurostatPopulation = func_readSourceData_Eurostat(flag_workInTogetherCMG)
 	df_worldBankPopulation = func_readSourceData_WorldBank(flag_workInTogetherCMG)
 	
-#region ECDC DATA DOWNLOAD & PREPARE
+#region ECDC DATA DOWNLOAD & PREPARE >>> OLD DAILY STRUCTURE
 if flag_doTheStatsUsing_ECDC:
 	flag_Datasource = flag_fileName_ecdc
 	df_covidData_ECDC = func_readDataFromSourceOrFromHdIfAvailableAlready(flag_Datasource)
@@ -1586,37 +1664,32 @@ if flag_doTheStatsUsing_ECDC:
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
 #endregion
 
-# region ECDC DATA DOWNLOAD & PREPARE
-if flag_doTheStatsUsing_ECDC_Weekly:
-	flag_Datasource = flag_fileName_ecdcWeekly
-	df_covidData_ECDC = func_readDataFromSourceOrFromHdIfAvailableAlready(flag_Datasource)
+# region ECDC DATA DOWNLOAD & PREPARE >>> NEW WEEKLY STRUCTURE
+if flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout:
+	flag_Datasource = flag_fileName_ecdcNEW_Weekly
+	df_covidData_ECDC_NEW_Weekly = func_readDataFromSourceOrFromHdIfAvailableAlready(flag_Datasource)
 
-	# df_covidData_ECDC = func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_covidData_ECDC)
+	df_covidData_ECDC_NEW_Weekly = df_covidData_ECDC_NEW_Weekly[
+		df_covidData_ECDC_NEW_Weekly[flag_ecdcWeeklyNEW_indicator] == "cases"]
 
 	func_doAllAroundSavingThisSourceDataset(
-		df_covidData_ECDC, flag_Datasource, "RAW",
+		df_covidData_ECDC_NEW_Weekly, flag_Datasource, "RAW",
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
 	
-	df_covidData_ECDC = func_prepareThisCovidData(df_covidData_ECDC, flag_Datasource, flag_workInTogetherCMG)
-	#
-	df_covidData_ECDC = func_compareIR_inRelationToItalyPerDay(
-		df_covidData_ECDC,
+	df_covidData_ECDC_NEW_Weekly = func_prepareThisCovidData(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG)
+
+	df_covidData_ECDC_NEW_Weekly = func_compareIR_inRelationToItalyPerDay(
+		df_covidData_ECDC_NEW_Weekly,
 		df_annex20CountryList,
-		dict_ecdc_dataset["new_weekly"]
+		dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]
 	)
 
-	# not needed
-	# df_covidData_ECDC = func_fill_IR_DeltaFigures(df_covidData_ECDC)
-	
-	# df_covidData_ECDC = func_calculateIRPredictionForCrossingItaly(df_covidData_ECDC, df_annex20CountryList)
+	# df_covidData_ECDC_NEW_Weekly = func_doTheFinalNameConversion(df_covidData_ECDC_NEW_Weekly, flag_ecdcWeekly_countriesAndTerritories)
 	#
-
-	df_covidData_ECDC = func_doTheFinalNameConversion(df_covidData_ECDC, flag_ecdcWeekly_countriesAndTerritories)
-
-	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC, flag_Datasource, flag_workInTogetherCMG, )
-	#
+	# func_exportFinalFileIntoPBIFolder(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG, )
+	# #
 	func_doAllAroundSavingThisSourceDataset(
-		df_covidData_ECDC, flag_Datasource, "PREPARED",
+		df_covidData_ECDC_NEW_Weekly, flag_Datasource, "PREPARED",
 		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
 # endregion
 
