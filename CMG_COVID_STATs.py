@@ -46,11 +46,15 @@ _version_ = 1.44
 # "JHU and ECDC data are now used in parallel" + chr(10) + \
 # "### ### ###"
 
-# V1.44
-informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
-"Rework to run outside the CMG network" + chr(10) + \
-"### ### ###"
+# # V1.44
+# informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
+# "Rework to run outside the CMG network" + chr(10) + \
+# "### ### ###"
 
+# V1.45
+informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
+"NEW ECDC Weekly file structure implemented" + chr(10) + \
+"### ### ###"
 
 import pandas as pd
 # import matplotlib
@@ -64,6 +68,7 @@ import sys
 import math
 from datetime import timedelta
 import getpass
+import datetime
 # from playsound import playsound
 
 yes = {'yes','y', 'ye', ''}
@@ -75,15 +80,16 @@ masterDelimiterFinalFiles = ";"
 flag_doTheStatsUsing_ECDC = 0
 flag_doTheStatsUsing_ECDC_Weekly = 0
 flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout = 1
-flag_doTheStatsUsing_JHU = 0
-flag_doTheGermanDistricts_RKI_YESTERDAY = 0
+flag_doTheStatsUsing_JHU = 1
+flag_doTheGermanDistricts_RKI_YESTERDAY = 1
 # ######################################################################################################################
 
 dict_possiblePaths = {
 	"path_local": 0,
 	"path_togetherCMG": 1,
 	"path_costaGroupShared": 2,
-	"path_TR_HomeLocal": 3
+	"path_TR_HomeLocal": 3,
+	"path_TR_HomeLocal_RKIGit": 4
 }
 
 dict_masterFileOrSubfileWithTimeStamp = {
@@ -132,6 +138,7 @@ dict_flag_pbi_path_finalFolder = {
 
 flag_pbi_name_fileName_ECDC = "COVID_Statistics_ECDC"
 flag_pbi_name_fileName_ECDC_Weekly = "COVID_Statistics_ECDC_WEEKLY"
+flag_pbi_name_fileName_ECDC_Weekly_NEW = "COVID_Statistics_ECDC_WEEKLY_NEW_Structure"
 flag_pbi_name_fileName_JHU = "COVID_Statistics_JohnsHopkinsUniversity"
 flag_pbi_name_fileName_RKI_District_Yesterday = "COVID_Statistics_RKI_PerDistrict_Yesterday"
 flag_pbi_name_fileName_RKI_District_Timeline = "COVID_Statistics_RKI_PerDistrict_Timeline"
@@ -145,7 +152,8 @@ dict_dataPaths_ECDC = {
 	0: r'C:\COVID_Reporting\Data\ECDC',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 flag_fileName_ecdc = "ECDC"
@@ -184,7 +192,8 @@ dict_dataPaths_ECDC = {
 	0: r'C:\COVID_Reporting\Data\ECDC',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 flag_fileName_ecdcWeekly = "ECDC_WEEKLY"
@@ -207,14 +216,15 @@ flag_ecdcWeekly_IR_thisDayInRelationToItalysIR = "IR above(1) or below(0) Italys
 #endregion
 
 # ######################################################################################################################
-#region WEEKLY ECDC Dataset OLD LAYOUT
+#region WEEKLY ECDC Dataset NEW LAYOUT
 flag_ecdcWeeklyNEW_sourceDataPathFromTheInternet = 'https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv'
 
 dict_dataPaths_ECDC = {
 	0: r'C:\COVID_Reporting\Data\ECDC',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\ECDC',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\ECDC',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\ECDC',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 flag_fileName_ecdcNEW_Weekly = "ECDC_WEEKLY_NEW_Layout"
@@ -228,6 +238,7 @@ flag_ecdcWeeklyNEW_population = 'population'
 flag_ecdcWeeklyNEW_indicator = 'indicator'
 flag_ecdcWeeklyNEW_weekly_count = 'weekly_count'
 flag_ecdcWeeklyNEW_year_week = 'year_week'
+flag_ecdcWeeklyNEW_lastDayOfReportingWeek = "lastDayOfWeek"
 flag_ecdcWeeklyNEW_rate_14_day = 'rate_14_day'
 flag_ecdcWeeklyNEW_cumulative_count = 'cumulative_count'
 flag_ecdcWeeklyNEW_source = 'source'
@@ -246,7 +257,8 @@ dict_dataPaths_JHU = {
 	0: r'C:\COVID_Reporting\Data\JHU',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\JHU',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\JHU',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\JHU'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\JHU',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 flag_fileName_jhu = "JHU"
@@ -338,7 +350,8 @@ dict_dataPaths_RKI_districtYesterday = {
 	0: r'C:\COVID_Reporting\Data\RKI_Districts_Yesterday',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\RKI_Districts_Yesterday',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Yesterday',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Yesterday'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Yesterday',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 url_districtsYesterday = \
@@ -375,7 +388,8 @@ dict_dataPaths_RKI_districtTimeline = {
 	0: r'C:\COVID_Reporting\Data\RKI_Districts_Timeline',
 	1: r'\\wrfile11\cmg\Together_CMG\Covid19_ECDC_JHU\Data\RKI_Districts_Timeline',
 	2: r'\\costafs.costa.it\groupshare\Public\Covid19_ECDC_JHU\Data\RKI_Districts_Timeline',
-	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Timeline'
+	3: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Districts_Timeline',
+	4: r'E:\001_CMG\010 CMG_Covid\002 Daily Data\RKI_Daily'
 }
 
 url_districtsTimeline = \
@@ -648,12 +662,13 @@ def func_compareIR_inRelationToItalyPerDay(
 					
 					if printAllDetailsInHere:
 						print(thisCountry + " annex20CountryFlag: (" + annex20CountryFlag + ")")
-					
-					if annex20CountryFlag != "empty" and thisCountry != "United Kingdom":
-						if printAllDetailsInHere:
-							print("skip this country ... Annex20 (" + df_annex20CountryList.loc[1, flag_annex20_Annex20CountryLetter] + ")")
-						
-						continue
+
+					if annex20CountryFlag != "A" and annex20CountryFlag != "B" and annex20CountryFlag != "C":
+						if annex20CountryFlag != "empty" and thisCountry != "United Kingdom":
+							if printAllDetailsInHere:
+								print("skip this country ... Annex20 (" + df_annex20CountryList.loc[1, flag_annex20_Annex20CountryLetter] + ")")
+
+							continue
 					
 					thisCountryInfectionRate = df_dataAllCountriesThisDay.loc[ap, harmonized_infectionRate]
 					
@@ -691,9 +706,9 @@ def func_compareIR_inRelationToItalyPerDay(
 					else:
 						if printAllDetailsInHere:
 							print("ATTENTION! NO IR FOR (" + thisCountry + ") at this day ... IR ("+str(thisCountryInfectionRate)+")")
-				else:
-					print(
-						"ATTENTION!!! NEW COUNTRY in ECDC Country List ... PLEASE ADD " + thisCountry + " into the ANNEX 20 XLS File!!")
+				# else:
+					# print(
+					# 	"ATTENTION!!! NEW COUNTRY in ECDC Country List ... PLEASE ADD " + thisCountry + " into the ANNEX 20 XLS File!!")
 		
 	return df_thisData
 
@@ -836,9 +851,15 @@ def func_createUsefulStructureOutOfJHU(
 			df_new.loc[ap_dfNew, flag_jhu_converted_totalCasesUntilThisDay] = df_jhu.loc[ap, thisCountry]
 			
 			if ap_thisCountry > 1:
-				df_new.loc[ap_dfNew, flag_jhu_converted_deltaPreviousDay] = \
-					df_new.loc[ap_dfNew, flag_jhu_converted_totalCasesUntilThisDay] - \
-					df_new.loc[ap_dfNew - 1, flag_jhu_converted_totalCasesUntilThisDay]
+				df_new.loc[ap_dfNew, flag_jhu_converted_deltaPreviousDay] = 0
+
+				if \
+						df_new.loc[ap_dfNew, flag_jhu_converted_totalCasesUntilThisDay] >= \
+						df_new.loc[ap_dfNew - 1, flag_jhu_converted_totalCasesUntilThisDay]:
+
+					df_new.loc[ap_dfNew, flag_jhu_converted_deltaPreviousDay] = \
+						df_new.loc[ap_dfNew, flag_jhu_converted_totalCasesUntilThisDay] - \
+						df_new.loc[ap_dfNew - 1, flag_jhu_converted_totalCasesUntilThisDay]
 			
 			if totalPopulation != 0:
 				if ap_thisCountry >= 7:
@@ -1062,8 +1083,20 @@ def func_addCumulativeTotalPerCountry(
 
 	if flag_ecdcDataset == dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]:
 		df_thisCovidData[flag_ecdcWeeklyNEW_cumulativeTotalCases] = 0
+		df_thisCovidData[flag_ecdcWeeklyNEW_lastDayOfReportingWeek] = ''
 
 		for ap in df_thisCovidData.index:
+
+			# print("full: " + str(df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_year_week]))
+			# print("YEAR: " + str(df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_year_week][:4]))
+			# print("Week: " + str(df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_year_week][5:7]))
+			df_thisCovidData.loc[ap,  flag_ecdcWeeklyNEW_lastDayOfReportingWeek] = \
+				func_getLastDayOfCalendarWeek(
+					df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_year_week][:4],
+					df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_year_week][5:7]
+				)
+
+
 			if ap > 0:
 				if \
 					df_thisCovidData.loc[ap, flag_ecdcWeeklyNEW_country] == \
@@ -1193,38 +1226,31 @@ def func_getPathAndFileNameForFinalPBIFile(
 	if thisSourceFileFlag == flag_fileName_ecdc:
 		localData_filePathAndName = \
 			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_ECDC + ".csv "
-		
-		print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
-		print(localData_filePathAndName)
 	
 	if thisSourceFileFlag == flag_fileName_ecdcWeekly:
 		localData_filePathAndName = \
 			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_ECDC_Weekly + ".csv "
-		
-		print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
-		print(localData_filePathAndName)
-		
+
+	if thisSourceFileFlag == flag_fileName_ecdcNEW_Weekly:
+		localData_filePathAndName = \
+			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_ECDC_Weekly_NEW + ".csv "
+
 	if thisSourceFileFlag == flag_fileName_jhu:
 		localData_filePathAndName = \
 			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_JHU + ".csv "
 		
-		print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
-		print(localData_filePathAndName)
-	
+
 	if thisSourceFileFlag == flag_fileName_RKI_District_Yesterday:
 		localData_filePathAndName = \
 			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_RKI_District_Yesterday + ".csv "
-		
-		print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
-		print(localData_filePathAndName)
-	
+
 	if thisSourceFileFlag == flag_fileName_RKI_District_Timeline:
 		localData_filePathAndName = \
 			dict_flag_pbi_path_finalFolder[flag_workInTogetherCMG] + chr(92) + flag_pbi_name_fileName_RKI_District_Timeline + ".csv "
-		
-		print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
-		print(localData_filePathAndName)
-	
+
+	print(chr(10) + thisSourceFileFlag + " final pbi file will be saved here ... ")
+	print(localData_filePathAndName)
+
 	if len(localData_filePathAndName) == 0:
 		print("NO LOCAL SOURCE PATH FOUND FOR: " + thisSourceFileFlag)
 	
@@ -1369,7 +1395,8 @@ def func_doAllAroundSavingThisSourceDataset(
 	flag_Datasource,
 	flag_raw_vs_prepared,
 	flag_workInTogetherCMG,
-	flag_saveCopyInCostaGroupSharedDrive
+	flag_saveCopyInCostaGroupSharedDrive,
+	userName
 ):
 	keyPathDict = flag_workInTogetherCMG #func_getKeyForDataStorageLocalVsShared(flag_workInTogetherCMG)
 	func_exportThisFileIntoThisFolder(
@@ -1377,14 +1404,22 @@ def func_doAllAroundSavingThisSourceDataset(
 		flag_raw_vs_prepared, dict_masterFileOrSubfileWithTimeStamp["fileType_dailyWithTime"]
 	)
 
-	if flag_saveCopyInCostaGroupSharedDrive:
-		func_exportThisFileIntoThisFolder(
-			df_thisDataset, flag_Datasource, dict_possiblePaths["path_costaGroupShared"],
-			flag_raw_vs_prepared, dict_masterFileOrSubfileWithTimeStamp["fileType_dailyWithTime"]
-		)
+	if flag_saveCopyInCostaGroupSharedDrive or \
+			(userName == "TR@FI_02" and flag_raw_vs_prepared == "RAW"):
+
+		if userName != "TR@FI_02":
+			thisPath = dict_possiblePaths["path_costaGroupShared"]
+		else:
+			thisPath = dict_possiblePaths["path_TR_HomeLocal_RKIGit"]
+
+		if userName != "TR@FI_02":
+			func_exportThisFileIntoThisFolder(
+				df_thisDataset, flag_Datasource, thisPath,
+				flag_raw_vs_prepared, dict_masterFileOrSubfileWithTimeStamp["fileType_dailyWithTime"]
+			)
 		
 		func_exportThisFileIntoThisFolder(
-			df_thisDataset, flag_Datasource, dict_possiblePaths["path_costaGroupShared"],
+			df_thisDataset, flag_Datasource, thisPath,
 			flag_raw_vs_prepared, dict_masterFileOrSubfileWithTimeStamp["fileType_master"]
 		)
 		
@@ -1411,6 +1446,7 @@ def func_readAnnex20CountryList(
 		print("| " + str(ap) + " = " + df_annex20CountryList.loc[ap, flag_annex20_Country] + " ANNEX20 (" + df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] + ") |")
 		if df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] == "C":
 			print("JEA, its a C")
+			df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] = "empty"
 		if df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] == "D":
 			print("JEA, its a D")
 		if df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] == "empty":
@@ -1532,13 +1568,14 @@ def func_calculateIRPredictionForCrossingItaly(
 					
 					if printAllDetailsInHere:
 						print(thisCountry + " annex20CountryFlag: (" + annex20CountryFlag + ")")
-					
-					if annex20CountryFlag != "empty":
-						if printAllDetailsInHere:
-							print("skip this country ... Annex20 (" + df_annex20CountryList.loc[
-								1, flag_annex20_Annex20CountryLetter] + ")")
-						
-						continue
+
+					if annex20CountryFlag != "A" and annex20CountryFlag != "B" and annex20CountryFlag != "C":
+						if annex20CountryFlag != "empty":
+							if printAllDetailsInHere:
+								print("skip this country ... Annex20 (" + df_annex20CountryList.loc[
+									1, flag_annex20_Annex20CountryLetter] + ")")
+
+							continue
 					
 					IR_Absolut_ThisCountryThisDay = df_dataAllCountriesThisDay.loc[ap, flag_ecdc_cumulative_IR_last_14_days]
 					IR_avgDeltaLastWeek_ThisCountryThisDay = df_dataAllCountriesThisDay.loc[ap, flag_ecdc_IR14_avgDeltaLastWeek]
@@ -1588,6 +1625,7 @@ def func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(
 	thisDF,
 	flagCountryColumn
 ):
+	print("REPLACE names")
 	for thisCountry in dict_oneMillionDifferentCountryNames:
 		print("thisCountry " + thisCountry + " will be replaced by " + dict_oneMillionDifferentCountryNames[thisCountry])
 		thisDF.loc[
@@ -1614,6 +1652,15 @@ def func_doTheFinalNameConversion(
 		] = dict_finalNamesBeforeSavingData[thisCountry]
 
 	return thisDF
+
+# ######################################################################################################################
+def func_getLastDayOfCalendarWeek(
+	year,
+	calendar_week
+):
+	monday = datetime.datetime.strptime(f'{year}-{calendar_week}-1', "%Y-%W-%w").date()
+
+	return monday + datetime.timedelta(days=6.9)
 
 # ######################################################################################################################
 print("### CMG Covid-19 Statistics V" + str(_version_) + " made in Python by Thomas Rosenkranz @ CMG")
@@ -1643,7 +1690,7 @@ if flag_doTheStatsUsing_ECDC:
 
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC, flag_Datasource, "RAW",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 	
 	df_covidData_ECDC = func_prepareThisCovidData(df_covidData_ECDC, flag_Datasource, flag_workInTogetherCMG)
 	
@@ -1654,14 +1701,14 @@ if flag_doTheStatsUsing_ECDC:
 	)
 	
 	df_covidData_ECDC = func_fill_IR_DeltaFigures(df_covidData_ECDC)
-	
-	df_covidData_ECDC = func_calculateIRPredictionForCrossingItaly(df_covidData_ECDC, df_annex20CountryList)
-	
+
+	# df_covidData_ECDC = func_calculateIRPredictionForCrossingItaly(df_covidData_ECDC, df_annex20CountryList)
+
 	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC, flag_Datasource, flag_workInTogetherCMG)
 	
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC, flag_Datasource, "PREPARED",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 #endregion
 
 # region ECDC DATA DOWNLOAD & PREPARE >>> NEW WEEKLY STRUCTURE
@@ -1674,7 +1721,7 @@ if flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout:
 
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC_NEW_Weekly, flag_Datasource, "RAW",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 	
 	df_covidData_ECDC_NEW_Weekly = func_prepareThisCovidData(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG)
 
@@ -1684,13 +1731,13 @@ if flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout:
 		dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]
 	)
 
-	# df_covidData_ECDC_NEW_Weekly = func_doTheFinalNameConversion(df_covidData_ECDC_NEW_Weekly, flag_ecdcWeekly_countriesAndTerritories)
-	#
-	# func_exportFinalFileIntoPBIFolder(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG, )
-	# #
+	df_covidData_ECDC_NEW_Weekly = func_doTheFinalNameConversion(df_covidData_ECDC_NEW_Weekly, flag_ecdcWeeklyNEW_country)
+
+	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG, )
+
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC_NEW_Weekly, flag_Datasource, "PREPARED",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 # endregion
 
 #region JHU DATA DOWNLOAD & PREPARE
@@ -1700,7 +1747,7 @@ if flag_doTheStatsUsing_JHU:
 	
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_JHU, flag_Datasource, "RAW",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 
 	df_covidData_JHU = func_prepareThisCovidData(df_covidData_JHU, flag_Datasource, flag_workInTogetherCMG)
 
@@ -1710,7 +1757,7 @@ if flag_doTheStatsUsing_JHU:
 	
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_JHU, flag_Datasource, "PREPARED",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 #endregion
 
 #region RKI DATA DOWNLOAD & PREPARE
@@ -1720,12 +1767,12 @@ if flag_doTheGermanDistricts_RKI_YESTERDAY:
 	
 	func_doAllAroundSavingThisSourceDataset(
 		df_RKI_Districts_Yesterday, flag_Datasource, "RAW",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 	
 	func_exportFinalFileIntoPBIFolder(df_RKI_Districts_Yesterday, flag_Datasource, flag_workInTogetherCMG)
 	func_doAllAroundSavingThisSourceDataset(
 		df_RKI_Districts_Yesterday, flag_Datasource, "PREPARED",
-		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive)
+		flag_workInTogetherCMG, flag_saveCopyInCostaGroupSharedDrive, username)
 #endregion
 
 print(chr(10) + "### that was fun, COVID stats are done, time to get a coffee ... pls press enter")
