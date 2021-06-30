@@ -51,25 +51,29 @@ _version_ = 1.44
 # "Rework to run outside the CMG network" + chr(10) + \
 # "### ### ###"
 
-# V1.45
+# # V1.45
+# informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
+# "NEW ECDC Weekly file structure implemented" + chr(10) + \
+# "### ### ###"
+
+# V1.46
 informationAboutLastVersion = "### NEW in V " + str(_version_) + chr(10) + \
-"NEW ECDC Weekly file structure implemented" + chr(10) + \
+"Japan/USA/Canada fixed on High Risk Country List" + chr(10) + \
 "### ### ###"
 
 import pandas as pd
-# import matplotlib
-# import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 import os
-import requests
 import json
 import sys
 import math
 from datetime import timedelta
 import getpass
 import datetime
-# from playsound import playsound
+from requests import request
+
+forceToAskForPath = False
 
 yes = {'yes','y', 'ye', ''}
 no = {'no','n'}
@@ -80,8 +84,8 @@ masterDelimiterFinalFiles = ";"
 flag_doTheStatsUsing_ECDC = 0
 flag_doTheStatsUsing_ECDC_Weekly = 0
 flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout = 1
-flag_doTheStatsUsing_JHU = 1
-flag_doTheGermanDistricts_RKI_YESTERDAY = 1
+flag_doTheStatsUsing_JHU = 1 #1
+flag_doTheGermanDistricts_RKI_YESTERDAY = 1 #1
 # ######################################################################################################################
 
 dict_possiblePaths = {
@@ -115,7 +119,8 @@ dict_oneMillionDifferentCountryNames = {
 	"Isle_of_Man": "United Kingdom / Isle of Man",
 	"San_Marino": "San Marino",
 	"United_Arab_Emirates": "United Arab Emirates",
-	"United_Kingdom": "United Kingdom"
+	"United_Kingdom": "United Kingdom",
+	"United_States_of_America": "United States of America"
 }
 
 dict_jhuCountryNamesToBeUpdatedBeforeDataPreparation = {
@@ -127,6 +132,8 @@ dict_finalNamesBeforeSavingData = {
 	"United Kingdom / Isle of Man": "Isle of Man",
 	"United Kingdom / Gibraltar": "Gibraltar"
 }
+
+list_ofCountriesForcedToBeOrange = ["Canada", "Japan", "United States Of America"]
 
 # ######################################################################################################################
 #region PBI Folder Path (local vs shared drive) and final file names
@@ -177,6 +184,7 @@ flag_ecdc_cumulativeTotalCases = "cumulativeTotalCases"
 flag_ecdc_totalNewCases_last_7_days = "new cases last 7 days"
 flag_ecdc_totalNewCases_last_14_days = "new cases last 14 days"
 flag_ecdc_IR_thisDayInRelationToItalysIR = "IR above(1) or below(0) Italys IR"
+flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList = "Forced-High-Risk-Country"
 flag_ecdc_IR14_deltaPerDay = "IR14 Delta"
 flag_ecdc_IR14_avgDeltaLastWeek = "IR14 avg last week"
 flag_ecdc_timeLeftBeforeCrossingItaly = "IR14 time before crossing"
@@ -407,6 +415,7 @@ dict_dataPaths_annex20CountryList = {
 flag_annex20_Country = "Country"
 flag_annex20_Comment = "Comment"
 flag_annex20_Annex20CountryLetter = "Annex 20 Country Letter"
+flag_annex20_FixCountryToHighRisk = "FIXED HIGH RISK Country"
 flag_annex20_CountryName_JHU = "Country Name JHU"
 flag_annex20_CountryName_Eurostat = "Country Name EUROSTAT"
 flag_annex20_CountryName_WorldBank = "Country Name World Bank"
@@ -526,8 +535,7 @@ def func_getCSVSeparationStrings(
 	
 	return thisDelimiter, thisDecimal
 
-
-# ######################################################################################################################
+' #####################################################################################################################'
 def func_prepareThisCovidData(
 	df_thisCovidData,
 	thisSourceFileFlag,
@@ -556,8 +564,7 @@ def func_prepareThisCovidData(
 	
 	return df_thisCovidData
 
-
-# ######################################################################################################################
+' #####################################################################################################################'
 def func_exportPreparedCovidDataset(
 	thisSourceFileFlag,
 	df_thisCovidData,
@@ -575,15 +582,15 @@ def func_exportPreparedCovidDataset(
 	
 	func_exportThisDatasetIntoThisPathAndFile(df_thisCovidData, localData_filePathAndName, thisDelimiter, thisDecimal)
 
-
-# ######################################################################################################################
-def func_compareIR_inRelationToItalyPerDay(
-	df_thisData,
-	df_annex20CountryList,
+' #####################################################################################################################'
+def func_getNeededFlagsDependingOnDataset(
 	flag_ecdcDataset
 ):
-	printAllDetailsInHere = False
-	
+	harmonized_date = ""
+	harmonized_country = ""
+	harmonized_infectionRate = ""
+	harmonized_IR_comparedToItaly = ""
+
 	if flag_ecdcDataset == dict_ecdc_dataset["old_daily"]:
 		harmonized_date = flag_ecdc_date
 		harmonized_country = flag_ecdc_countryLongName
@@ -602,9 +609,23 @@ def func_compareIR_inRelationToItalyPerDay(
 		harmonized_infectionRate = flag_ecdcWeeklyNEW_rate_14_day
 		harmonized_IR_comparedToItaly = flag_ecdcWeeklyNEW_IR_thisDayInRelationToItalysIR
 
+	return harmonized_date, harmonized_country, harmonized_infectionRate, harmonized_IR_comparedToItaly
+
+' #####################################################################################################################'
+def func_compareIR_inRelationToItalyPerDay(
+	df_thisData,
+	df_annex20CountryList,
+	flag_ecdcDataset
+):
+	printAllDetailsInHere = False
+
+	harmonized_date, harmonized_country, harmonized_infectionRate, harmonized_IR_comparedToItaly = \
+		func_getNeededFlagsDependingOnDataset(flag_ecdcDataset)
+
 	func_replaceCountryNamesToHarmonizeWithAnnex20MasterList(df_thisData, harmonized_country)
 
 	df_thisData[harmonized_IR_comparedToItaly] = -1
+	df_thisData[flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList] = 0
 	
 	for thisUniqueDay in df_thisData[harmonized_date].unique():
 		df_dataAllCountriesThisDay = df_thisData[df_thisData[harmonized_date] == thisUniqueDay]
@@ -709,7 +730,14 @@ def func_compareIR_inRelationToItalyPerDay(
 				# else:
 					# print(
 					# 	"ATTENTION!!! NEW COUNTRY in ECDC Country List ... PLEASE ADD " + thisCountry + " into the ANNEX 20 XLS File!!")
-		
+
+	# for thisCountry in list_ofCountriesForcedToBeOrange:
+	# 	print("ATTENTION >> we are forced to put " + thisCountry + " in the list of high risk countries")
+	# 	df_thisData.loc[
+	# 		(df_thisData[harmonized_country] == thisCountry),
+	# 		harmonized_IR_comparedToItaly
+	# 	] = 1
+
 	return df_thisData
 
 
@@ -1326,7 +1354,7 @@ def func_getPathToSaveFiles(
 ):
 	flag_workInTogetherCMG = False
 
-	if username != 'TR@FI_02':
+	if username != 'TR@FI_02' or forceToAskForPath:
 		print(chr(10) + "### WORKING & SAVING FILES IN SHARED DRIVE Together_CMG\Covid19_ECDC_JHU? (yes or no?)")
 		choice = input().lower()
 		if choice in yes:
@@ -1426,7 +1454,8 @@ def func_doAllAroundSavingThisSourceDataset(
 
 # ######################################################################################################################
 def func_readAnnex20CountryList(
-	flag_workInTogetherCMG
+	flag_workInTogetherCMG,
+	list_ofCountriesForcedToBeOrange
 ):
 	xlsFileHandle = pd.ExcelFile(dict_dataPaths_annex20CountryList[flag_workInTogetherCMG])
 	
@@ -1451,7 +1480,11 @@ def func_readAnnex20CountryList(
 			print("JEA, its a D")
 		if df_annex20CountryList.loc[ap, flag_annex20_Annex20CountryLetter] == "empty":
 			print("OH NO, its empty")
-		
+
+		if df_annex20CountryList.loc[ap, flag_annex20_FixCountryToHighRisk] == "x":
+			print("this country " + str(str(df_annex20CountryList.loc[ap, flag_annex20_Country])) + " is forced to be on the high risk list!!")
+			list_ofCountriesForcedToBeOrange.append(str(df_annex20CountryList.loc[ap, flag_annex20_Country]))
+
 	print("##################################")
 	# print(df_annex20CountryList.head(8))
 	
@@ -1459,8 +1492,11 @@ def func_readAnnex20CountryList(
 		print("oh yea, next column: " + thisColumn)
 	
 	func_printThisDataframeHeader(df_annex20CountryList, 5)
-	
-	return df_annex20CountryList
+
+	print("### list_ofCountriesForcedToBeOrange >>> adjust that in the ECDC_CountryList_Annex20.xlsx ###")
+	print(list_ofCountriesForcedToBeOrange)
+
+	return df_annex20CountryList, list_ofCountriesForcedToBeOrange
 
 
 # ######################################################################################################################
@@ -1653,7 +1689,7 @@ def func_doTheFinalNameConversion(
 
 	return thisDF
 
-# ######################################################################################################################
+' #####################################################################################################################'
 def func_getLastDayOfCalendarWeek(
 	year,
 	calendar_week
@@ -1662,7 +1698,40 @@ def func_getLastDayOfCalendarWeek(
 
 	return monday + datetime.timedelta(days=6.9)
 
-# ######################################################################################################################
+' #####################################################################################################################'
+def func_changeRiskRankingForDefinedCountries(
+	df_thisData,
+	flag_ecdcDataset
+):
+	print("START func_changeRiskRankingForDefinedCountries")
+
+	harmonized_date, harmonized_country, harmonized_infectionRate, harmonized_IR_comparedToItaly = \
+		func_getNeededFlagsDependingOnDataset(flag_ecdcDataset)
+
+	# for thisCountry in list_ofCountriesForcedToBeOrange:
+	# 	print("ATTENTION >> we are forced to put >>" + thisCountry + "<< in the list of high risk countries in this column >>" + harmonized_country + "<< in harmonized_IR_comparedToItaly >>" + harmonized_IR_comparedToItaly+"<<")
+	#
+	# 	cntOfLines = df_thisData[
+	# 		(df_thisData[harmonized_country] == thisCountry)
+	# 	].count()
+	#
+	# 	print("cntOfLines " + str(cntOfLines))
+	#
+	# 	df_thisData.loc[
+	# 		(df_thisData[harmonized_country] == thisCountry)
+	# 	][harmonized_IR_comparedToItaly] = 1
+	#
+	# 	df_thisData.to_csv("wtf.csv", sep=masterDelimiterFinalFiles, decimal=".", index=False)
+
+	for ap in df_thisData.index:
+		if df_thisData.loc[ap, harmonized_country] in list_ofCountriesForcedToBeOrange:
+			# print("change this country " + df_thisData.loc[ap, harmonized_country] + " @ line " + str(ap))
+			# df_thisData.loc[ap, harmonized_IR_comparedToItaly] = 1
+			df_thisData.loc[ap, flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList] = 1
+
+	return df_thisData
+
+' #####################################################################################################################'
 print("### CMG Covid-19 Statistics V" + str(_version_) + " made in Python by Thomas Rosenkranz @ CMG")
 print(informationAboutLastVersion)
 print(chr(10) + "Covid-19 data on country level based on JHU (Johns Hopkins University & Medicine)")
@@ -1674,7 +1743,7 @@ flag_workInTogetherCMG = func_getPathToSaveFiles(username)
 
 flag_saveCopyInCostaGroupSharedDrive = func_saveCopyInCostaGroupSharedDrive(username)
 
-df_annex20CountryList = func_readAnnex20CountryList(flag_workInTogetherCMG)
+df_annex20CountryList, list_ofCountriesForcedToBeOrange = func_readAnnex20CountryList(flag_workInTogetherCMG, list_ofCountriesForcedToBeOrange)
 
 if flag_doTheStatsUsing_JHU:
 	df_unitedNations = func_readSourceData_UnitedNations(flag_workInTogetherCMG)
@@ -1733,7 +1802,14 @@ if flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout:
 
 	df_covidData_ECDC_NEW_Weekly = func_doTheFinalNameConversion(df_covidData_ECDC_NEW_Weekly, flag_ecdcWeeklyNEW_country)
 
-	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG, )
+	# df_covidData_ECDC_NEW_Weekly.to_csv("df_covidData_ECDC_NEW_Weekly.csv", decimal=".", sep=";")
+
+	df_covidData_ECDC_NEW_Weekly = func_changeRiskRankingForDefinedCountries(
+		df_covidData_ECDC_NEW_Weekly,
+		dict_ecdc_dataset["new_weekly_changedStructureFeb2021"]
+	)
+
+	func_exportFinalFileIntoPBIFolder(df_covidData_ECDC_NEW_Weekly, flag_Datasource, flag_workInTogetherCMG)
 
 	func_doAllAroundSavingThisSourceDataset(
 		df_covidData_ECDC_NEW_Weekly, flag_Datasource, "PREPARED",
