@@ -91,8 +91,8 @@ masterDelimiterFinalFiles = ";"
 flag_doTheStatsUsing_ECDC = 0
 flag_doTheStatsUsing_ECDC_Weekly = 0
 flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout = 1
-flag_doTheStatsUsing_JHU = 1 #1
-flag_doTheGermanDistricts_RKI_YESTERDAY = 1 #1
+flag_doTheStatsUsing_JHU = 0 #1
+flag_doTheGermanDistricts_RKI_YESTERDAY = 0 #1
 # ######################################################################################################################
 
 dict_possiblePaths = {
@@ -140,7 +140,7 @@ dict_finalNamesBeforeSavingData = {
 	"United Kingdom / Gibraltar": "Gibraltar"
 }
 
-list_ofCountriesForcedToBeOrange = ["Canada", "Japan", "United States Of America"]
+list_ofCountriesForcedToBeOrange = []#'["Canada", "Japan", "United States Of America"]
 
 # ######################################################################################################################
 #region PBI Folder Path (local vs shared drive) and final file names
@@ -1833,11 +1833,21 @@ def func_changeRiskRankingForDefinedCountries(
 	#
 	# 	df_thisData.to_csv("wtf.csv", sep=masterDelimiterFinalFiles, decimal=".", index=False)
 
-	for ap in df_thisData.index:
-		if df_thisData.loc[ap, harmonized_country] in list_ofCountriesForcedToBeOrange:
-			# print("change this country " + df_thisData.loc[ap, harmonized_country] + " @ line " + str(ap))
-			# df_thisData.loc[ap, harmonized_IR_comparedToItaly] = 1
-			df_thisData.loc[ap, flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList] = 1
+	for thisCountry in list_ofCountriesForcedToBeOrange:
+		print("change this country " + thisCountry + " to be a forced high risk country")
+		df_thisData.loc[
+			(df_thisData[harmonized_country] == thisCountry),
+			flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList
+		] = 1
+
+	df_thisData = df_thisData.reset_index(drop=True)
+
+	# for ap in df_thisData.index:
+	# 	if df_thisData.loc[ap, harmonized_country] in list_ofCountriesForcedToBeOrange:
+	# 		#print("change this country " + df_thisData.loc[ap, harmonized_country] + " @ line " + str(ap))
+	# 		df_thisData.loc[ap, flag_ecdc_ThisCountryIsForcedToBeOnTheHighRiskList] = 1
+
+	df_thisData.to_csv("wtf.csv", sep=masterDelimiterFinalFiles, decimal=".", index=False)
 
 	return df_thisData
 
