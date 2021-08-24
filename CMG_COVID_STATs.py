@@ -91,8 +91,8 @@ masterDelimiterFinalFiles = ";"
 flag_doTheStatsUsing_ECDC = 0
 flag_doTheStatsUsing_ECDC_Weekly = 0
 flag_doTheStatsUsing_ECDC_Weekly_NEW_Layout = 1
-flag_doTheStatsUsing_JHU = 0 #1
-flag_doTheGermanDistricts_RKI_YESTERDAY = 0 #1
+flag_doTheStatsUsing_JHU = 1 #1
+flag_doTheGermanDistricts_RKI_YESTERDAY = 1 #1
 # ######################################################################################################################
 
 dict_possiblePaths = {
@@ -1423,7 +1423,6 @@ def func_readDataFromRKI_via_NPGEO_InJson():
 	
 	return(df_districts)
 
-
 # ######################################################################################################################
 def func_exportThisFileIntoThisFolder(
 	df_thisDataset,
@@ -1443,7 +1442,6 @@ def func_exportThisFileIntoThisFolder(
 	func_exportThisDatasetIntoThisPathAndFile(
 		df_thisDataset, localData_filePathAndName, thisDelimiter, thisDecimal
 	)
-
 
 # ######################################################################################################################
 def func_getPathToSaveFiles(
